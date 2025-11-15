@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Gestión de Clubes</title>
+
+  <!-- Bootstrap 4 -->
+  <link rel="stylesheet"
+        href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"/>
+
+  <style>
+    body { background: #f5f7fb; }
+    .card { border: 0; box-shadow: 0 6px 18px rgba(0,0,0,.06); border-radius: 12px; }
+    .card-header { background: #fff; border-bottom: 1px solid #eee; }
+    .badge-pill { font-weight: 500; }
+    .table-sm td, .table-sm th { padding: .4rem .6rem; }
+  </style>
+</head>
+<body>
+<div class="container my-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h3 class="mb-0">Gestión de Clubes</h3>
+    <a class="btn btn-outline-secondary btn-sm" href="/h2-console" target="_blank">H2 Console</a>
+  </div>
+
+  <!-- ALERTAS (opcionales) -->
+  <div th:if="${flash != null}" class="alert alert-info" th:text="${flash}"></div>
+
+  <!-- CREAR CLUB -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="mb-3">Crear nuevo club</h5>
+      <form th:action="@{/clubes}" method="post">
+        <div class="form-row">
+          <div class="col-md-4 mb-2">
+            <input name="nombre" class="form-control" placeholder="Nombre del club" required>
+          </div>
+          <div class="col-md-4 mb-2">
+            <select name="entrenadorId" class="form-control" required>
+              <option value="" disabled selected>Selecciona entrenador</option>
+              <option th:each="e : ${entrenadores}"
+                      th:value="${e.id}"
+                      th:text="${e.nombre + ' ' + e.apellido}">
+              </option>
+            </select>
+          </div>
+          <div class="col-md-3 mb-2">
+            <select name="asociacionId" class="form-control" required>
+              <option value="" disabled selected>Selecciona asociación</option>
+              <option th:each="a : ${asociaciones}"
+                      th:value="${a.id}"
+                      th:text="${a.nombre}">
+              </option>
+            </select>
+          </div>
+          <div class="col-md-1 mb-2">
+            <button class="btn btn-primary btn-block" type="submit">Crear</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- LISTA DE CLUBES -->
+  <div th:if="${#lists.isEmpty(clubes)}" class="alert alert-light">
+    No hay clubes creados aún.
+  </div>
+
+  <div th:each="club : ${clubes}" class="card mb-4">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <div>
+        <h5 class="mb-0" th:text="${club.nombre}">Nombre del Club</h5>
+        <small class="text-muted" th:if="${club.asociacion != null}">
+          <span class="mr-2">Asociación:</span>
+          <span th:text="${club.asociacion.nombre}">Asociación</span>
+        </small>
+      </div>
+      <div class="btn-group">
+        <!-- botón colapsable de jugadores -->
+        <button class="btn btn-sm btn-success"
+                type="button"
+                data-toggle="collapse"
+                th:attr="data-target=|#jugadores-${club.id}|"
+                aria-expanded="false"
+                th:attrappend="aria-controls=|jugadores-${club.id}|">
+          Jugadores
+        </button>
+
+        <a class="btn btn-sm btn-outline-primary"
+           th:href="@{|/clubes/${club.id}/edit|}">
+          Editar
+        </a>
+
+        <form th:action="@{|/clubes/${club.id}/delete|}" method="post" class="d-inline">
+          <button class="btn btn-sm btn-outline-danger"
+                  type="submit"
+                  onclick="return confirm('¿Eliminar club y sus relaciones?')">
+            Eliminar
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <!-- ENTRENADOR -->
+      <div class="mb-2">
+        <span class="mr-2 font-weight-bold">Entrenador:</span>
+        <span th:text="${club.entrenador != null ? club.entrenador.nombre + ' ' + club.entrenador.apellido : '—'}">—</span>
+      </div>
+	  
+	  <!-- Update como PUT -->
+	  <form th:action="@{/clubes/{id}(id=${club.id})}" method="post">
+	    <input type="hidden" name="_method" value="put"/>
+	    ...
+	  </form>
+
+	  <!-- Delete como DELETE -->
+	  <form th:action="@{/clubes/{id}(id=${club.id})}" method="post">
+	    <input type="hidden" name="_method" value="delete"/>
+	    <button type="submit">Eliminar</button>
+	  </form>
+
+
+      <!-- CAMBIAR ENTRENADOR -->
+      <form class="form-inline mb-3"
+            th:action="@{|/clubes/${club.id}/entrenador|}"
+            method="post">
+        <label class="mr-2">Cambiar entrenador:</label>
+        <select name="entrenadorId" class="form-control form-control-sm mr-2" required>
+          <option th:each="e : ${entrenadores}"
+                  th:value="${e.id}"
+                  th:selected="${club.entrenador != null} ? ${e.id == club.entrenador.id} : false"
+                  th:text="${e.nombre + ' ' + e.apellido}">
+          </option>
+        </select>
+        <button class="btn btn-sm btn-outline-primary" type="submit">Actualizar</button>
+      </form>
+
+      <!-- COMPETICIONES -->
+      <div class="mb-3">
+        <span class="mr-2 font-weight-bold">Competiciones:</span>
+        <span th:if="${#lists.isEmpty(club.competiciones)}" class="text-muted">—</span>
+        <span th:if="${!#lists.isEmpty(club.competiciones)}">
+          <span th:each="comp : ${club.competiciones}"
+                class="badge badge-pill badge-info mr-1"
+                th:text="${comp.nombre}">
+          </span>
+        </span>
+      </div>
+
+      <!-- JUGADORES (COLLAPSE) -->
+      <div class="collapse" th:attr="id=|jugadores-${club.id}|">
+        <h6 class="mb-2">Jugadores</h6>
+
+        <div th:if="${#lists.isEmpty(club.jugadores)}" class="text-muted mb-2">
+          Sin jugadores aún.
+        </div>
+
+        <table class="table table-sm table-hover"
+               th:if="${!#lists.isEmpty(club.jugadores)}">
+          <thead class="thead-light">
+          <tr>
+            <th style="width:80px">#</th>
+            <th>Nombre</th>
+            <th style="width:180px">Posición</th>
+            <th style="width:90px"></th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="j : ${club.jugadores}">
+            <td th:text="${j.numero}">10</td>
+            <td th:text="${j.nombre + ' ' + j.apellido}">Nombre Apellido</td>
+            <td th:text="${j.posicion}">Posición</td>
+            <td class="text-right">
+              <form th:action="@{|/clubes/${club.id}/jugadores/${j.id}/delete|}"
+                    method="post" class="d-inline">
+                <button class="btn btn-sm btn-outline-danger" type="submit"
+                        title="Eliminar">&times;</button>
+              </form>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+
+        <!-- AGREGAR JUGADOR -->
+        <form class="form-inline"
+              th:action="@{|/clubes/${club.id}/jugadores|}"
+              method="post">
+          <input type="text" name="nombre" class="form-control form-control-sm mr-2"
+                 placeholder="Nombre" required>
+          <input type="text" name="apellido" class="form-control form-control-sm mr-2"
+                 placeholder="Apellido" required>
+          <input type="number" name="numero" class="form-control form-control-sm mr-2"
+                 placeholder="N°" min="1" required>
+          <input type="text" name="posicion" class="form-control form-control-sm mr-2"
+                 placeholder="Posición" required>
+          <button class="btn btn-sm btn-success" type="submit">Agregar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JS (Bootstrap 4 requiere jQuery y Popper) -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
